@@ -19,18 +19,18 @@ import re
 import sys
 import json
 import urllib2
-import requests
 import base64
 import ssl
 import time
 
-requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
-
-ctx = ssl.create_default_context()
+try:
+	ctx = ssl.create_default_context()
+except:
+	ctx = None
 
 def main():
 	get_vcap_config()
-	if skip_ssl_validation:
+	if skip_ssl_validation and ctx is not None:
 		ctx.check_hostname = False
 		ctx.verify_mode = ssl.CERT_NONE
 	appinfo = get_application_info()
@@ -131,31 +131,31 @@ def start_registrar(service, appinfo):
 
 def list_registered_apps(service):
 	uri = service['base_uri'] + '/apps'
-	headers = {
-		'Authorization': service['access_token'],
-		'Accept': 'application/json'
-	}
 	if log_level > 1:
 		print "GET", uri
-	response = requests.get(uri, headers=headers, verify=False)
-	response.raise_for_status()
-	registrations = response.json()
+	req = urllib2.Request(uri)
+	req.add_header('Authorization', service['access_token'])
+	req.add_header('Accept', 'application/json')
+	registrations = json.load(urllib2.urlopen(req, context=ctx))
 	print json.dumps(registrations, indent=4)
 
 def send_heartbeat(service, appinfo):
 	uri = service['instance_uri']
-	headers = { 'Authorization': service['access_token'] }
 	if log_level > 1:
 		print "PUT", uri
-	response = requests.put(uri, headers=headers, verify=False)
-	if response.status_code == requests.codes.not_found:
-		register_service(service, appinfo)
-	else:
-		response.raise_for_status()
+	req = urllib2.Request(uri)
+	req.add_header('Authorization', service['access_token'])
+	req.get_method = lambda : "PUT"
+	try:
+		urllib2.urlopen(req, context=ctx)
+	except urllib2.HTTPError as e:
+		if e.code == 404:
+			register_service(service, appinfo)
+		else:
+			raise
 
 def register_service(service, appinfo):
 	uri = service['application_uri']
-	headers = { 'Authorization': service['access_token'], 'Content-Type': 'application/json' }
 	data = {
 		'instance': {
 			'instanceId': appinfo['instance'],
@@ -180,13 +180,19 @@ def register_service(service, appinfo):
 	if log_level > 1:
 		print "POST", uri
 		print json.dumps(data, indent=4)
-	response = requests.post(uri, data=json.dumps(data), headers=headers, verify=False)
-	if response.status_code != 204: # Technically, this means no_content, but Eureka uses it to indicate success
-		print >> sys.stderr, json.dumps(data, indent=4)
-		print >> sys.stderr, response.status_code
-		print >> sys.stderr, response.text
-		response.raise_for_status()
-	elif log_level > 1:
+	req = urllib2.Request(uri)
+	req.add_header('Authorization', service['access_token'])
+	req.add_header('Content-Type', 'application/json')
+	req.get_method = lambda : "POST"
+	try:
+		urllib2.urlopen(req, data=json.dumps(data), context=ctx)
+	except urllib2.HTTPError as e:
+		if e.code != 204:
+			print >> sys.stderr, json.dumps(data, indent=4)
+			print >> sys.stderr, response.status_code
+			print >> sys.stderr, response.text
+			raise
+	if log_level > 1:
 		print 'Successfully registered service'
 
 if __name__ == "__main__":
