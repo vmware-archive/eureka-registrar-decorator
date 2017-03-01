@@ -24,4 +24,4 @@
 # them in exported environment variables, here - in the parent
 # process - which will also be the parent for the application.
 
-python eureka_registrar.py &
+python ~/eureka_registrar/eureka_registrar.py &
