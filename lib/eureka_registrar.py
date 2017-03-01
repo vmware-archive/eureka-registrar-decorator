@@ -23,8 +23,10 @@ import base64
 import ssl
 import time
 
+urlargs = {}
 try:
 	ctx = ssl.create_default_context()
+	urlargs['context'] = ctx
 except:
 	ctx = None
 
@@ -96,7 +98,7 @@ def get_access_token(credentials):
 	req = urllib2.Request(access_token_uri)
 	req.add_header('Authorization', 'Basic ' + base64.b64encode(client_id + ":" + client_secret))
 	body = "grant_type=client_credentials"
-	response = json.load(urllib2.urlopen(req, data=body, context=ctx))
+	response = json.load(urllib2.urlopen(req, data=body, **urlargs))
 	access_token = response.get('access_token')
 	token_type = response.get('token_type')
 	return token_type + " " + access_token
@@ -136,7 +138,7 @@ def list_registered_apps(service):
 	req = urllib2.Request(uri)
 	req.add_header('Authorization', service['access_token'])
 	req.add_header('Accept', 'application/json')
-	registrations = json.load(urllib2.urlopen(req, context=ctx))
+	registrations = json.load(urllib2.urlopen(req, **urlargs))
 	print json.dumps(registrations, indent=4)
 
 def send_heartbeat(service, appinfo):
@@ -145,9 +147,10 @@ def send_heartbeat(service, appinfo):
 		print "PUT", uri
 	req = urllib2.Request(uri)
 	req.add_header('Authorization', service['access_token'])
+	req.add_header('Content-Length', 0)
 	req.get_method = lambda : "PUT"
 	try:
-		urllib2.urlopen(req, context=ctx)
+		urllib2.urlopen(req)
 	except urllib2.HTTPError as e:
 		if e.code == 404:
 			register_service(service, appinfo)
@@ -185,7 +188,7 @@ def register_service(service, appinfo):
 	req.add_header('Content-Type', 'application/json')
 	req.get_method = lambda : "POST"
 	try:
-		urllib2.urlopen(req, data=json.dumps(data), context=ctx)
+		urllib2.urlopen(req, data=json.dumps(data), **urlargs)
 	except urllib2.HTTPError as e:
 		if e.code != 204:
 			print >> sys.stderr, json.dumps(data, indent=4)
