@@ -6,7 +6,7 @@ language* supported by the platform, and requiring *zero application code change
 
 When this decorator (and the [meta-buildpack](https://github.com/cf-platform-eng/meta-buildpack))
 is present in your Cloud Foundry deployment, all you will have to do to register all instances of your
-application with the Eurkea discovery server is bind the application to your Spring Cloud
+application with the Eureka discovery server is bind the application to your Spring Cloud
 Eureka Servive instance. Instances will then automatically be registered and continue to send heartbeats
 as long as the application container is alive.
 
