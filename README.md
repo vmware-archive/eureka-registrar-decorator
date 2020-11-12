@@ -1,3 +1,5 @@
+# eureka-registrar-decorator is no longer actively maintained by VMware.
+
 # Eureka Registrar Decorator
 
 > <b>NOTE: Meta-buildback is being deprecated</b><br/>
